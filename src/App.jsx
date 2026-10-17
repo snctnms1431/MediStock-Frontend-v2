@@ -7,7 +7,6 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import { LoginView } from './components/views/LoginView';
-import { RegisterView } from './components/views/RegisterView';
 
 // Protected Route Component
 const ProtectedApp = () => {
@@ -42,6 +41,8 @@ function AppRoutes() {
         <Routes>
             <Route path="/" element={<ProtectedApp />} />
             <Route path="/dashboard" element={<ProtectedApp />} />
+            {/* If you decide to make Admin a separate route instead of a tab, use this: */}
+            {/* <Route path="/admin" element={<ProtectedApp />} /> */}
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />

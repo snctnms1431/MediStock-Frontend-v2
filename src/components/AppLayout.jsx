@@ -19,6 +19,9 @@ import { auditService } from '../services/auditService';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 
+import AdminDashboardPage from '../pages/AdminDashboardPage';
+
+
 import { 
     LayoutDashboard, 
     Pill, 
@@ -170,7 +173,12 @@ export const AppLayout = () => {
 
                 {/* View Container */}
                 <main className="flex-1 p-3 sm:p-6 lg:p-8 pb-24 lg:pb-8 overflow-y-auto">
-                    {activeTab === 'dashboard' && (
+                   
+                   {activeTab === 'admin' && (
+                        <AdminDashboardPage />
+                    )}
+                   
+                   {activeTab === 'dashboard' && (
                         <DashboardOverviewView
                             medicines={medicines}
                             suppliers={suppliers}

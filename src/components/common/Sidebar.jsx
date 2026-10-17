@@ -1,5 +1,6 @@
 import React from 'react';
 import { MediStockLogo } from './MediStockLogo';
+import { useAuth } from '../../context/AuthContext'; // Adjust path if necessary
 import { 
     LayoutDashboard, 
     Pill, 
@@ -10,6 +11,7 @@ import {
     UserCheck,
     ChevronRight,
     Shield,
+    ShieldCheck, // New Icon for Admin
     X
 } from 'lucide-react';
 
@@ -20,6 +22,8 @@ export const Sidebar = ({
     mobileOpen = false, 
     onCloseMobile = () => {} 
 }) => {
+    const { user } = useAuth(); // Get the logged-in user
+
     const navItems = [
         {
             id: 'dashboard',
@@ -67,6 +71,17 @@ export const Sidebar = ({
             badge: null
         }
     ];
+
+    // Conditionally add Admin Tab
+    const isAdmin = user?.role === 'Admin' || user?.role === 'ADMIN';
+    if (isAdmin) {
+        navItems.push({
+            id: 'admin',
+            label: 'Admin Control Panel',
+            icon: ShieldCheck,
+            badge: null
+        });
+    }
 
     const handleItemClick = (id) => {
         onSelectTab(id);
