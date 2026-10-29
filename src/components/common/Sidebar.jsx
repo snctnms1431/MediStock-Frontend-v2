@@ -1,185 +1,165 @@
 import React from 'react';
-import { MediStockLogo } from './MediStockLogo';
-import { useAuth } from '../../context/AuthContext'; // Adjust path if necessary
 import { 
-    LayoutDashboard, 
-    Pill, 
-    Snowflake, 
-    Truck, 
-    FileText, 
-    ClipboardCheck, 
-    UserCheck,
-    ChevronRight,
-    Shield,
-    ShieldCheck, // New Icon for Admin
-    X
+    LayoutDashboard, Pill, Clock, Tags, 
+    Truck, Package, FileText, Receipt, History, Users, 
+    BarChart3, Bell, Activity,
+    ChevronRight, UserCircle
 } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext'; // IMPORT AUTH
 
-export const Sidebar = ({ 
-    activeTab, 
-    onSelectTab, 
-    counts = {}, 
-    mobileOpen = false, 
-    onCloseMobile = () => {} 
-}) => {
-    const { user } = useAuth(); // Get the logged-in user
+export const Sidebar = ({ activeTab, onSelectTab, counts = {} }) => {
+    const { user } = useAuth();
+    console.log("CURRENT USER ROLE:", user?.role);
+    // Convert to uppercase so "Pharmacist" and "PHARMACIST" both work
+const role = (user?.role || 'ADMIN').toUpperCase();  // Default to admin if undefined for safety
 
-    const navItems = [
+    // 1. ADMIN MENU (Keep exactly as you had it)
+    const adminNavSections = [
         {
-            id: 'dashboard',
-            label: 'Dashboard Overview',
-            icon: LayoutDashboard,
-            badge: null
+            title: "Main",
+            items: [
+                { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
+                { id: 'medicines', name: 'Medicines', icon: Pill },
+                { id: 'expiry', name: 'Expiry', icon: Clock },
+                { id: 'categories', name: 'Categories', icon: Tags },
+            ]
         },
         {
-            id: 'inventory',
-            label: 'Formulary Inventory',
-            icon: Pill,
-            badge: counts.total || null,
-            badgeColor: 'bg-emerald-100 text-emerald-800'
+            title: "Operations",
+            items: [
+                { id: 'suppliers', name: 'Suppliers', icon: Truck },
+                { id: 'inventory', name: 'Inventory', icon: Package },
+                { id: 'purchase-orders', name: 'Purchase Orders', icon: FileText },
+                { id: 'billing', name: 'Billing / POS', icon: Receipt },
+                { id: 'sales', name: 'Sales History', icon: History },
+            ]
         },
         {
-            id: 'expiry',
-            label: 'Cold-Chain & Expiry',
-            icon: Snowflake,
-            badge: counts.critical || null,
-            badgeColor: 'bg-amber-100 text-amber-800'
-        },
-        {
-            id: 'suppliers',
-            label: 'Distributor Network',
-            icon: Truck,
-            badge: counts.suppliers || null,
-            badgeColor: 'bg-slate-100 text-slate-700'
-        },
-        {
-            id: 'reports',
-            label: 'Reports & Analytics',
-            icon: FileText,
-            badge: null
-        },
-        {
-            id: 'audit',
-            label: 'Compliance Audit Logs',
-            icon: ClipboardCheck,
-            badge: null
-        },
-        {
-            id: 'profile',
-            label: 'User Credentials',
-            icon: UserCheck,
-            badge: null
+            title: "Administration",
+            items: [
+                { id: 'users', name: 'Users & Roles', icon: Users },
+                { id: 'reports', name: 'Reports', icon: BarChart3 },
+            ]
         }
     ];
 
-    // Conditionally add Admin Tab
-    const isAdmin = user?.role === 'Admin' || user?.role === 'ADMIN';
-    if (isAdmin) {
-        navItems.push({
-            id: 'admin',
-            label: 'Admin Control Panel',
-            icon: ShieldCheck,
-            badge: null
-        });
-    }
-
-    const handleItemClick = (id) => {
-        onSelectTab(id);
-        if (onCloseMobile) {
-            onCloseMobile();
+    // 2. PHARMACIST MENU (Added from your document)
+    const pharmacistNavSections = [
+        {
+            title: "Inventory Management",
+            items: [
+                { id: 'dashboard', name: 'Dashboard', icon: LayoutDashboard },
+                { id: 'medicines', name: 'Medicines', icon: Pill },
+                { id: 'categories', name: 'Categories', icon: Tags },
+                { id: 'inventory', name: 'Stock Monitoring', icon: Package },
+                { id: 'expiry', name: 'Expiry Tracking', icon: Clock },
+            ]
+        },
+        {
+            title: "Procurement",
+            items: [
+                { id: 'purchase-orders', name: 'Purchase Orders', icon: FileText },
+                { id: 'suppliers', name: 'Suppliers', icon: Truck },
+                { id: 'reports', name: 'Inventory Reports', icon: BarChart3 },
+            ]
+        },
+        {
+            title: "Account",
+            items: [
+                { id: 'profile', name: 'My Profile', icon: UserCircle },
+            ]
         }
-    };
+    ];
 
-    const sidebarContent = (isMobile = false) => (
-        <div className="flex flex-col justify-between h-full">
-            <div>
-                {/* Top Brand Header */}
-                <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-                    <MediStockLogo size="md" />
-                    {isMobile && (
-                        <button
-                            onClick={onCloseMobile}
-                            className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                            aria-label="Close navigation menu"
-                        >
-                            <X size={20} />
-                        </button>
-                    )}
-                </div>
-
-                {/* Navigation Items */}
-                <nav className="p-3 space-y-1 mt-1 overflow-y-auto max-h-[calc(100vh-180px)]">
-                    <div className="px-3 pb-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                        Clinical Modules
-                    </div>
-                    {navItems.map(item => {
-                        const Icon = item.icon;
-                        const isActive = activeTab === item.id;
-                        return (
-                            <button
-                                key={item.id}
-                                onClick={() => handleItemClick(item.id)}
-                                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer group ${
-                                    isActive
-                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200/80 shadow-xs'
-                                        : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                                }`}
-                            >
-                                <div className="flex items-center gap-3 truncate">
-                                    <Icon size={17} className={`shrink-0 ${isActive ? 'text-emerald-600' : 'text-slate-400 group-hover:text-slate-600'}`} />
-                                    <span className="truncate">{item.label}</span>
-                                </div>
-
-                                <div className="flex items-center gap-1.5 shrink-0">
-                                    {item.badge !== null && item.badge !== undefined && (
-                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badgeColor}`}>
-                                            {item.badge}
-                                        </span>
-                                    )}
-                                    {isActive && <ChevronRight size={13} className="text-emerald-600" />}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </nav>
-            </div>
-
-            {/* Bottom System Health Badge */}
-            <div className="p-3.5 m-3 rounded-2xl bg-slate-50 border border-slate-200/80">
-                <div className="flex items-center gap-2 mb-1">
-                    <Shield size={14} className="text-emerald-600 shrink-0" />
-                    <span className="text-xs font-bold text-slate-800">GxP Standard Active</span>
-                </div>
-                <p className="text-[11px] text-slate-500 leading-snug">
-                    Telemetry synchronized. Ready for hospital data entry.
-                </p>
-            </div>
-        </div>
-    );
+    // 3. CHOOSE MENU BASED ON ROLE
+    const navSections = role === 'PHARMACIST' ? pharmacistNavSections : adminNavSections;
 
     return (
-        <>
-            {/* Desktop Sticky Sidebar (Visible >= lg: 1024px) */}
-            <aside className="hidden lg:flex w-64 shrink-0 bg-white border-r border-slate-200 flex-col justify-between h-screen sticky top-0 shadow-xs z-20">
-                {sidebarContent(false)}
-            </aside>
-
-            {/* Mobile Slide-Over Drawer & Overlay (Visible < lg when mobileOpen is true) */}
-            {mobileOpen && (
-                <div className="fixed inset-0 z-50 lg:hidden">
-                    {/* Backdrop */}
-                    <div 
-                        className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs transition-opacity duration-300"
-                        onClick={onCloseMobile}
-                        aria-hidden="true"
-                    />
-
-                    {/* Drawer */}
-                    <aside className="fixed inset-y-0 left-0 w-72 max-w-[85vw] bg-white shadow-2xl flex flex-col justify-between h-full z-10 transform transition-transform duration-300 ease-in-out">
-                        {sidebarContent(true)}
-                    </aside>
+        <aside className="w-64 h-screen sticky top-0 bg-slate-200 text-slate-600 flex flex-col shrink-0 border-r border-slate-200 shadow-[4px_0_24px_rgba(0,0,0,0.02)] z-20">
+            
+            {/* Logo Area */}
+            <div className="h-20 flex items-center px-6 border-b border-slate-100">
+                <img 
+                    src="images/medistock_logo.png" 
+                    alt="MediStock" 
+                    className="h-12 object-contain" 
+                    onError={(e) => {
+                        e.target.style.display = 'none';
+                        e.target.nextSibling.style.display = 'flex';
+                    }}
+                />
+                <div className="hidden items-center gap-2 text-slate-900 font-bold text-xl tracking-tight">
+                    <Activity className="text-blue-600" size={24} />
+                    MEDISTOCK
                 </div>
-            )}
-        </>
+            </div>
+
+            {/* Navigation Links */}
+            <nav className="flex-1 overflow-y-auto py-6 px-3 custom-scrollbar space-y-6">
+                {navSections.map((section, idx) => (
+                    <div key={idx}>
+                        <h3 className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                            {section.title}
+                        </h3>
+                        
+                        <ul className="space-y-1">
+                            {section.items.map((item) => {
+                                const isActive = activeTab === item.id;
+                                return (
+                                    <li key={item.id}>
+                                        <button
+                                            onClick={() => onSelectTab(item.id)}
+                                            className={`w-full group flex items-center px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                                                isActive 
+                                                    ? 'bg-blue-50 text-blue-700 shadow-sm' 
+                                                    : 'hover:bg-slate-50 text-slate-600 hover:text-slate-900' 
+                                            }`}
+                                        >
+                                            <item.icon 
+                                                className={`mr-3 transition-colors ${
+                                                    isActive ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+                                                }`} 
+                                                size={18} 
+                                            />
+                                            <span className="flex-1 text-left">{item.name}</span>
+                                            
+                                            {isActive && (
+                                                <ChevronRight size={14} className="text-blue-400" />
+                                            )}
+                                        </button>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    </div>
+                ))}
+            </nav>
+
+            {/* Notification & Footer Area */}
+            <div className="p-4 border-t border-slate-100 bg-slate-50/50">
+                 <button
+                    onClick={() => onSelectTab('notifications')}
+                    className={`w-full group flex items-center px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+                        activeTab === 'notifications' 
+                            ? 'bg-white shadow-sm border border-slate-200 text-blue-700' 
+                            : 'hover:bg-white hover:shadow-sm text-slate-600 hover:text-slate-900 border border-transparent' 
+                    }`}
+                >
+                    <Bell 
+                        className={`mr-3 ${
+                            activeTab === 'notifications' ? 'text-blue-600' : 'text-slate-400 group-hover:text-slate-600'
+                        }`} 
+                        size={18} 
+                    />
+                    <span className="flex-1 text-left">Notifications</span>
+                    
+                    {counts.critical > 0 && (
+                        <span className="bg-rose-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-sm ring-2 ring-white">
+                            {counts.critical}
+                        </span>
+                    )}
+                </button>
+            </div>
+        </aside>
     );
 };
