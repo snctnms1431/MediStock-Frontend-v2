@@ -6,6 +6,7 @@ import {
     Pill, Package, AlertTriangle, CalendarClock, Boxes,
     ChevronDown, ArrowUp, ArrowDown
 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 export default function MedicinesManagementPage({
     onOpenAddModal,
@@ -22,6 +23,8 @@ export default function MedicinesManagementPage({
         key: 'id',
         direction: 'asc'
     });
+    const { user } = useAuth();
+    const role = (user?.role || '').toUpperCase();
 
     const fetchMeds = async () => {
         try {
@@ -148,7 +151,7 @@ export default function MedicinesManagementPage({
                         </p>
                     </div>
 
-                    {isAdmin && (
+                    {(isAdmin || role === 'PHARMACIST') && (
                         <button
                             type="button"
                             onClick={onOpenAddModal}
@@ -285,8 +288,9 @@ export default function MedicinesManagementPage({
                                         <SortButton label="Expiry Date" field="expiryDate" />
                                     </th>
                                     <th className="px-5 py-4 font-semibold">Supplier</th>
-                                    {isAdmin && (<th className="px-5 py-4 text-right font-semibold">Actions</th>)}
-                                </tr>
+{(isAdmin || role === 'PHARMACIST') && (
+    <th className="px-5 py-4 text-right font-semibold">Actions</th>
+)}                                </tr>
                             </thead>
 
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -418,7 +422,7 @@ export default function MedicinesManagementPage({
                                                 </td>
 
                                                 {/* Actions */}
-                                                {isAdmin && (
+                                                {(isAdmin || role === 'PHARMACIST') && (
     <td className="px-5 py-4">
         <div className="flex items-center justify-end gap-2">
             <button

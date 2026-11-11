@@ -67,6 +67,17 @@ export const adminService = {
         const response = await axiosClient.delete(`/admin/suppliers/${id}`);
         return response.data;
     },
+    // Fetch orders for the logged-in supplier only
+getSupplierOrders: async () => {
+    const response = await axiosClient.get('/admin/purchase-orders/supplier');
+    return response.data;
+},
+
+// Update order status (used by supplier to mark delivered)
+updatePurchaseOrderStatus: async (id, status) => {
+    const response = await axiosClient.put(`/admin/purchase-orders/${id}/status?status=${status}`);
+    return response.data;
+},
 
     // --- DASHBOARD STATS ---
     getDashboardStats: async () => {
@@ -146,9 +157,10 @@ export const adminService = {
     },
 
         // For Supplier Dashboard
-    getSupplierOrders: async () => {
-        const response = await axiosClient.get('/supplier/purchase-orders');
+       getSupplierOrders: async () => {
+        const response = await axiosClient.get('/admin/purchase-orders/supplier');
         return response.data;
+    
     },
     // --- BILLING ---
     processSale: async (saleData) => {
@@ -158,6 +170,143 @@ export const adminService = {
         getSalesHistory: async () => {
         const response = await axiosClient.get('/billing/sales');
         return response.data;
+    },
+        // --- SUPPLIER DELIVERY & HISTORY ---
+    getSupplierDeliveries: async () => {
+        const response = await axiosClient.get('/admin/purchase-orders/supplier/deliveries');
+        return response.data;
+    },
+
+    getSupplierHistory: async () => {
+        const response = await axiosClient.get('/admin/purchase-orders/supplier/history');
+        return response.data;
+    },
+
+        // STAFF: View incoming deliveries
+    getStaffDeliveries: async () => {
+        const response = await axiosClient.get('/admin/purchase-orders/staff/deliveries');
+        return response.data;
+    },
+
+        // STAFF RECEIVE MEDICINES
+    receivePurchaseOrder: async (orderId) => {
+        const response = await axiosClient.post(`/admin/purchase-orders/${orderId}/receive`);
+        return response.data;
+    },
+
+    // STAFF TASKS
+    getAllStaff: async () => {
+        const response = await axiosClient.get('/admin/users/staff');
+        return response.data;
+    },
+    getAllTasks: async () => {
+        const response = await axiosClient.get('/admin/tasks');
+        return response.data;
+    },
+    createTask: async (taskData) => {
+        const response = await axiosClient.post('/admin/tasks', taskData);
+        return response.data;
+    },
+    getMyTasks: async () => {
+        const response = await axiosClient.get('/admin/tasks/my-tasks');
+        return response.data;
+    },
+    updateTaskStatus: async (taskId, status) => {
+        const response = await axiosClient.put(`/admin/tasks/${taskId}/status`, { status });
+        return response.data;
+    },
+    deleteTask: async (taskId) => {
+        const response = await axiosClient.delete(`/admin/tasks/${taskId}`);
+        return response.data;
+    },
+        // AUDIT LOGS
+    getAuditLogs: async () => {
+        const response = await axiosClient.get('/admin/audit-logs');
+        return response.data;
+    },
+        // FEFO
+    getBatchesFEFO: async (medicineName) => {
+        const response = await axiosClient.get(`/admin/inventory/medicines/fefo/${encodeURIComponent(medicineName)}`);
+        return response.data;
+    },
+    dispenseFEFO: async (medicineId, quantity, reason = "Sale") => {
+        const response = await axiosClient.post(`/admin/inventory/medicines/${medicineId}/dispense-fefo`, {
+            quantity, reason
+        });
+        return response.data;
+    },
+
+        // FEEDBACK
+    submitFeedback: async (feedbackData) => {
+        const response = await axiosClient.post('/feedback', feedbackData);
+        return response.data;
+    },
+    getAllFeedback: async () => {
+        const response = await axiosClient.get('/feedback');
+        return response.data;
+    },
+    getMyFeedback: async () => {
+        const response = await axiosClient.get('/feedback/my-feedback');
+        return response.data;
+    },
+    updateFeedback: async (id, data) => {
+        const response = await axiosClient.put(`/feedback/${id}`, data);
+        return response.data;
+    },
+    deleteFeedback: async (id) => {
+        const response = await axiosClient.delete(`/feedback/${id}`);
+        return response.data;
+    },
+
+    updateMyProfile: async (updates) => {
+    const response = await axiosClient.put('/auth/profile', updates);
+    return response.data;
+},
+
+    triggerLowStockAlert: async () => {
+        const response = await axiosClient.post('/admin/inventory/send-low-stock-alert');
+        return response.data;
+    },
+
+        triggerExpiryAlert: async () => {
+        const response = await axiosClient.post('/admin/inventory/send-expiry-alert');
+        return response.data;
+    },
+
+        // WASTAGE REPORT
+    getWastageReport: async () => {
+        const response = await axiosClient.get('/admin/inventory/reports/wastage');
+        return response.data;
+    },
+    flagWastage: async (medicineId, reason) => {
+        const response = await axiosClient.put(`/admin/inventory/medicines/${medicineId}/flag-wastage`, { reason });
+        return response.data;
+    },
+    unflagWastage: async (medicineId) => {
+        const response = await axiosClient.put(`/admin/inventory/medicines/${medicineId}/unflag-wastage`);
+        return response.data;
+    },
+        // BACKUPS
+    listBackups: async () => {
+        const response = await axiosClient.get('/admin/backups');
+        return response.data;
+    },
+    createBackup: async () => {
+        const response = await axiosClient.post('/admin/backups/create');
+        return response.data;
+    },
+    restoreBackup: async (fileName) => {
+        const response = await axiosClient.post(`/admin/backups/restore/${fileName}`);
+        return response.data;
+    },
+    deleteBackup: async (fileName) => {
+        const response = await axiosClient.delete(`/admin/backups/${fileName}`);
+        return response.data;
+    },
+    downloadBackupUrl: (fileName) => {
+        // Returns full URL for the <a download> link
+        const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api';
+        return `${base}/admin/backups/download/${fileName}`;
     },
 
 };

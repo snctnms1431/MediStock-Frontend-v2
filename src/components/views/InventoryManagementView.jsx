@@ -1,4 +1,8 @@
 import React, { useMemo, useState } from 'react';
+import { FEFOBatchViewer } from '../modals/FEFOBatchViewer';
+import { Bell } from 'lucide-react';
+import { adminService } from '../../services/adminService';
+
 import {
     Search,
     Plus,
@@ -15,11 +19,13 @@ import {
     ArrowDownRight,
     X,
     RefreshCw,
-    SlidersHorizontal
+    SlidersHorizontal,
+    Zap
 } from 'lucide-react';
 
 export const InventoryManagementView = ({
     medicines = [],
+    role,
     onOpenAddModal,
     onEditMedicine,
     onDeleteMedicine,
@@ -27,6 +33,7 @@ export const InventoryManagementView = ({
 }) => {
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('ALL');
+    const [fefoViewer, setFefoViewer] = useState(null);
 
     const safeMedicines = Array.isArray(medicines) ? medicines : [];
 
@@ -64,40 +71,23 @@ export const InventoryManagementView = ({
         if (!filteredMeds.length) return;
 
         const headers = [
-            'Medicine Name',
-            'Generic Name',
-            'Batch Number',
-            'Quantity',
-            'Minimum Quantity',
-            'Expiry Date',
-            'Storage Condition',
-            'Unit Price',
-            'Status'
+            'Medicine Name', 'Generic Name', 'Batch Number', 'Quantity',
+            'Minimum Quantity', 'Expiry Date', 'Storage Condition', 'Unit Price', 'Status'
         ];
 
         const escapeCSV = (value) =>
             `"${String(value ?? '').replace(/"/g, '""')}"`;
 
         const rows = filteredMeds.map(med => [
-            med.name,
-            med.genericName,
-            med.batchNumber,
-            med.quantity,
-            med.minQuantity,
-            med.expiryDate,
-            med.storageCondition,
-            med.unitPrice,
-            med.status
+            med.name, med.genericName, med.batchNumber, med.quantity,
+            med.minQuantity, med.expiryDate, med.storageCondition, med.unitPrice, med.status
         ]);
 
         const csv = [headers, ...rows]
             .map(row => row.map(escapeCSV).join(','))
             .join('\n');
 
-        const blob = new Blob(['\uFEFF' + csv], {
-            type: 'text/csv;charset=utf-8;'
-        });
-
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
 
@@ -111,24 +101,25 @@ export const InventoryManagementView = ({
 
     const getStatusStyle = (status) => {
         const styles = {
-            IN_STOCK:
-                'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/20',
-            LOW_STOCK:
-                'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20',
-            OUT_OF_STOCK:
-                'bg-rose-50 text-rose-700 ring-rose-600/20 dark:bg-rose-400/10 dark:text-rose-300 dark:ring-rose-400/20',
-            EXPIRED:
-                'bg-slate-100 text-slate-700 ring-slate-500/20 dark:bg-slate-700/50 dark:text-slate-300 dark:ring-slate-500/30',
-            EXPIRING_SOON:
-                'bg-orange-50 text-orange-700 ring-orange-600/20 dark:bg-orange-400/10 dark:text-orange-300 dark:ring-orange-400/20'
+            IN_STOCK: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-emerald-400/20',
+            LOW_STOCK: 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-400/10 dark:text-amber-300 dark:ring-amber-400/20',
+            OUT_OF_STOCK: 'bg-rose-50 text-rose-700 ring-rose-600/20 dark:bg-rose-400/10 dark:text-rose-300 dark:ring-rose-400/20',
+            EXPIRED: 'bg-slate-100 text-slate-700 ring-slate-500/20 dark:bg-slate-700/50 dark:text-slate-300 dark:ring-slate-500/30',
+            EXPIRING_SOON: 'bg-orange-50 text-orange-700 ring-orange-600/20 dark:bg-orange-400/10 dark:text-orange-300 dark:ring-orange-400/20'
         };
-
-        return styles[status] ||
-            'bg-slate-100 text-slate-600 ring-slate-500/20 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600/30';
+        return styles[status] || 'bg-slate-100 text-slate-600 ring-slate-500/20 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-600/30';
     };
 
     const formatStatus = (status) =>
         (status || 'UNKNOWN').replace(/_/g, ' ');
+
+    // Helper: Is this medicine a FEFO priority? (expires within 45 days, not yet expired)
+    const isFefoPriority = (med) => {
+        if (!med.expiryDate) return false;
+        const expiry = new Date(med.expiryDate);
+        const days = Math.ceil((expiry - new Date()) / (1000 * 60 * 60 * 24));
+        return days >= 0 && days <= 45;
+    };
 
     const statCards = [
         {
@@ -165,16 +156,24 @@ export const InventoryManagementView = ({
         }
     ];
 
+    const handleSendLowStockAlert = async () => {
+    if (!window.confirm("Send low-stock alert email to all Admins and Pharmacists?")) return;
+    try {
+        const result = await adminService.triggerLowStockAlert();
+        alert(`✅ ${result.message} (${result.itemsIncluded} items included)`);
+    } catch (err) {
+        alert("Failed: " + (err.response?.data?.error || err.message));
+    }
+};
+
     return (
         <div className="min-h-full space-y-5 bg-slate-50/70 pb-8 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
-
             {/* Page Header */}
             <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
                 <div className="flex items-start gap-3">
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700 ring-1 ring-emerald-200/70 dark:bg-emerald-400/10 dark:text-emerald-400 dark:ring-emerald-400/20">
                         <PackageOpen size={25} />
                     </div>
-
                     <div>
                         <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">
                             Inventory Management
@@ -196,6 +195,38 @@ export const InventoryManagementView = ({
                         Export CSV
                     </button>
 
+{/* Send Low Stock Alert — ADMIN ONLY */}
+{role === 'ADMIN' && (
+    <button
+        type="button"
+        onClick={handleSendLowStockAlert}
+        className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-xs font-semibold text-amber-800 shadow-sm transition hover:bg-amber-100 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 sm:text-sm"
+    >
+        <Bell size={15} />
+        Send Low Stock Alert
+    </button>
+)}
+
+{/* Send Expiry Alert — ADMIN ONLY */}
+{role === 'ADMIN' && (
+    <button
+        type="button"
+        onClick={async () => {
+            if (!window.confirm("Send expiry alert email to all Admins and Pharmacists?")) return;
+            try {
+                const r = await adminService.triggerExpiryAlert();
+                alert(`✅ ${r.message} (${r.itemsIncluded} items)`);
+            } catch (err) {
+                alert("Failed: " + (err.response?.data?.error || err.message));
+            }
+        }}
+        className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-3.5 py-2.5 text-xs font-semibold text-rose-800 shadow-sm transition hover:bg-rose-100 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 sm:text-sm"
+    >
+        <Bell size={15} />
+        Send Expiry Alert
+    </button>
+)}
+
                     <button
                         type="button"
                         onClick={onOpenAddModal}
@@ -211,66 +242,40 @@ export const InventoryManagementView = ({
             <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
                 {statCards.map((card) => {
                     const Icon = card.icon;
-
                     return (
-                        <div
-                            key={card.label}
-                            className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900"
-                        >
+                        <div key={card.label} className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
                             <div className="flex items-start justify-between gap-2">
                                 <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${card.iconBg}`}>
                                     <Icon size={19} className={card.color} />
                                 </div>
-
-                                <span className="rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-400 dark:bg-slate-800 dark:text-slate-500">
-                                    Inventory
-                                </span>
+                                <span className="rounded-lg bg-slate-50 px-2 py-1 text-[10px] font-medium text-slate-400 dark:bg-slate-800 dark:text-slate-500">Inventory</span>
                             </div>
-
                             <div className="mt-4">
-                                <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                                    {card.value}
-                                </p>
-                                <p className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-200">
-                                    {card.label}
-                                </p>
-                                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 sm:text-[11px]">
-                                    {card.description}
-                                </p>
+                                <p className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">{card.value}</p>
+                                <p className="mt-1 text-xs font-semibold text-slate-700 dark:text-slate-200">{card.label}</p>
+                                <p className="mt-1 text-[10px] text-slate-500 dark:text-slate-400 sm:text-[11px]">{card.description}</p>
                             </div>
                         </div>
                     );
                 })}
             </div>
 
-            {/* Inventory Table Container */}
+            {/* Table Container */}
             <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900">
-
-                {/* Table Heading */}
                 <div className="flex flex-col gap-3 border-b border-slate-200 p-4 dark:border-slate-800 sm:flex-row sm:items-center sm:justify-between sm:px-5">
                     <div>
-                        <h2 className="text-sm font-bold text-slate-900 dark:text-white">
-                            Medicine Registry
-                        </h2>
-                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">
-                            View and manage your registered medicine batches.
-                        </p>
+                        <h2 className="text-sm font-bold text-slate-900 dark:text-white">Medicine Registry</h2>
+                        <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">View and manage your registered medicine batches.</p>
                     </div>
-
                     <div className="inline-flex w-fit items-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-xs font-medium text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                         <Package size={14} />
                         {filteredMeds.length} of {safeMedicines.length} products
                     </div>
                 </div>
 
-                {/* Search and Filters */}
                 <div className="flex flex-col gap-3 border-b border-slate-100 p-4 dark:border-slate-800 sm:flex-row sm:items-center sm:px-5">
                     <div className="relative flex-1">
-                        <Search
-                            size={16}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                        />
-
+                        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                         <input
                             type="text"
                             placeholder="Search medicine, generic name or batch..."
@@ -278,7 +283,6 @@ export const InventoryManagementView = ({
                             onChange={e => setSearchTerm(e.target.value)}
                             className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-9 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-100 dark:focus:border-emerald-500 dark:focus:bg-slate-950 sm:text-sm"
                         />
-
                         {searchTerm && (
                             <button
                                 type="button"
@@ -292,11 +296,7 @@ export const InventoryManagementView = ({
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <SlidersHorizontal
-                            size={15}
-                            className="shrink-0 text-slate-400"
-                        />
-
+                        <SlidersHorizontal size={15} className="shrink-0 text-slate-400" />
                         <select
                             value={statusFilter}
                             onChange={e => setStatusFilter(e.target.value)}
@@ -309,7 +309,6 @@ export const InventoryManagementView = ({
                             <option value="EXPIRED">Expired</option>
                             <option value="EXPIRING_SOON">Expiring Soon</option>
                         </select>
-
                         {(searchTerm || statusFilter !== 'ALL') && (
                             <button
                                 type="button"
@@ -322,21 +321,11 @@ export const InventoryManagementView = ({
                     </div>
                 </div>
 
-                {/* Responsive Table */}
                 <div className="w-full overflow-x-auto">
                     <table className="w-full min-w-[1050px] text-left text-xs">
                         <thead className="bg-slate-50/90 dark:bg-slate-800/50">
                             <tr className="border-b border-slate-200 dark:border-slate-800">
-                                {[
-                                    'Medicine',
-                                    'Batch / Lot',
-                                    'Current Stock',
-                                    'Expiry Date',
-                                    'Storage',
-                                    'Unit Price',
-                                    'Status',
-                                    'Actions'
-                                ].map((heading, index) => (
+                                {['Medicine', 'Batch / Lot', 'Current Stock', 'Expiry Date', 'Storage', 'Unit Price', 'Status', 'Actions'].map((heading, index) => (
                                     <th
                                         key={heading}
                                         className={`whitespace-nowrap px-5 py-3.5 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 ${
@@ -348,7 +337,6 @@ export const InventoryManagementView = ({
                                 ))}
                             </tr>
                         </thead>
-
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {filteredMeds.map((med) => {
                                 const quantity = Number(med.quantity) || 0;
@@ -362,18 +350,16 @@ export const InventoryManagementView = ({
                                     ? new Date(med.expiryDate).toLocaleDateString()
                                     : '—';
 
+                                const fefoBadge = isFefoPriority(med);
+
                                 return (
-                                    <tr
-                                        key={med.id}
-                                        className="group transition-colors hover:bg-emerald-50/40 dark:hover:bg-slate-800/60"
-                                    >
+                                    <tr key={med.id} className="group transition-colors hover:bg-emerald-50/40 dark:hover:bg-slate-800/60">
                                         {/* Medicine */}
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-3">
                                                 <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-slate-50 text-slate-500 transition group-hover:border-emerald-200 group-hover:bg-emerald-50 group-hover:text-emerald-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:group-hover:border-emerald-400/20 dark:group-hover:bg-emerald-400/10 dark:group-hover:text-emerald-400">
                                                     <Package size={17} />
                                                 </div>
-
                                                 <div className="min-w-0">
                                                     <p className="max-w-[190px] truncate font-semibold text-slate-800 dark:text-slate-100">
                                                         {med.name || 'Unnamed medicine'}
@@ -387,11 +373,18 @@ export const InventoryManagementView = ({
                                             </div>
                                         </td>
 
-                                        {/* Batch */}
+                                        {/* Batch — with FEFO Priority Badge */}
                                         <td className="px-5 py-4">
                                             <span className="rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-mono text-[10px] text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
                                                 {med.batchNumber || 'N/A'}
                                             </span>
+                                            {fefoBadge && (
+                                                <div className="mt-1">
+                                                    <span className="inline-block rounded bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-700 dark:bg-amber-400/20 dark:text-amber-300">
+                                                        FEFO PRIORITY
+                                                    </span>
+                                                </div>
+                                            )}
                                         </td>
 
                                         {/* Stock Controls */}
@@ -402,44 +395,27 @@ export const InventoryManagementView = ({
                                                     title="Decrease stock by one"
                                                     aria-label={`Decrease stock for ${med.name}`}
                                                     disabled={!onAdjustStock || quantity <= 0}
-                                                    onClick={() =>
-                                                        onAdjustStock?.(
-                                                            med.id,
-                                                            -1,
-                                                            'Manual Adjustment'
-                                                        )
-                                                    }
+                                                    onClick={() => onAdjustStock?.(med.id, -1, 'Manual Adjustment')}
                                                     className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-rose-400/30 dark:hover:bg-rose-400/10 dark:hover:text-rose-400"
                                                 >
                                                     <Minus size={13} />
                                                 </button>
-
                                                 <span className={`min-w-8 text-center text-sm font-bold tabular-nums ${
-                                                    lowStock
-                                                        ? 'text-amber-600 dark:text-amber-400'
-                                                        : 'text-slate-800 dark:text-slate-100'
+                                                    lowStock ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-100'
                                                 }`}>
                                                     {quantity}
                                                 </span>
-
                                                 <button
                                                     type="button"
                                                     title="Increase stock by one"
                                                     aria-label={`Increase stock for ${med.name}`}
                                                     disabled={!onAdjustStock}
-                                                    onClick={() =>
-                                                        onAdjustStock?.(
-                                                            med.id,
-                                                            1,
-                                                            'Manual Adjustment'
-                                                        )
-                                                    }
+                                                    onClick={() => onAdjustStock?.(med.id, 1, 'Manual Adjustment')}
                                                     className="flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:border-emerald-400/30 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-400"
                                                 >
                                                     <Plus size={13} />
                                                 </button>
                                             </div>
-
                                             <p className="mt-1.5 text-[10px] text-slate-400 dark:text-slate-500">
                                                 Min. {minQuantity}
                                             </p>
@@ -448,10 +424,7 @@ export const InventoryManagementView = ({
                                         {/* Expiry */}
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-1.5 whitespace-nowrap text-slate-600 dark:text-slate-300">
-                                                <CalendarClock
-                                                    size={13}
-                                                    className="text-slate-400"
-                                                />
+                                                <CalendarClock size={13} className="text-slate-400" />
                                                 {expiryDate}
                                             </div>
                                         </td>
@@ -482,6 +455,14 @@ export const InventoryManagementView = ({
                                         <td className="px-5 py-4">
                                             <div className="flex items-center justify-end gap-1.5">
                                                 <button
+                                                   type="button"
+                                                    title="View batches by expiry (FEFO)"
+                                                    onClick={() => setFefoViewer(med)}
+                                                     className="flex h-8 w-8 items-center justify-center rounded-lg border border-transparent text-slate-400 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:border-emerald-400/20 dark:hover:bg-emerald-400/10 dark:hover:text-emerald-400"
+                                                      >
+                                                   <Zap size={15} />
+                                              </button>
+                                                <button
                                                     type="button"
                                                     title="Edit medicine"
                                                     aria-label={`Edit ${med.name}`}
@@ -491,7 +472,6 @@ export const InventoryManagementView = ({
                                                 >
                                                     <Edit size={15} />
                                                 </button>
-
                                                 <button
                                                     type="button"
                                                     title="Delete medicine"
@@ -515,17 +495,14 @@ export const InventoryManagementView = ({
                                         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500">
                                             <PackageOpen size={25} />
                                         </div>
-
                                         <h3 className="mt-4 text-sm font-bold text-slate-800 dark:text-slate-100">
                                             No medicines found
                                         </h3>
-
                                         <p className="mx-auto mt-1 max-w-sm text-xs leading-5 text-slate-500 dark:text-slate-400">
                                             {searchTerm || statusFilter !== 'ALL'
                                                 ? 'Try changing your search or status filter.'
                                                 : 'Your inventory is empty. Register a product to get started.'}
                                         </p>
-
                                         {(searchTerm || statusFilter !== 'ALL') ? (
                                             <button
                                                 type="button"
@@ -552,13 +529,11 @@ export const InventoryManagementView = ({
                     </table>
                 </div>
 
-                {/* Table Footer */}
                 {filteredMeds.length > 0 && (
                     <div className="flex flex-col gap-2 border-t border-slate-200 bg-slate-50/70 px-5 py-3 text-[10px] text-slate-500 dark:border-slate-800 dark:bg-slate-950/50 dark:text-slate-400 sm:flex-row sm:items-center sm:justify-between">
                         <span>
                             Showing <span className="font-semibold text-slate-700 dark:text-slate-200">{filteredMeds.length}</span> products
                         </span>
-
                         <span className="flex items-center gap-1.5">
                             <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                             Inventory data
@@ -566,6 +541,13 @@ export const InventoryManagementView = ({
                     </div>
                 )}
             </div>
+            {fefoViewer && (
+    <FEFOBatchViewer
+        isOpen={!!fefoViewer}
+        onClose={() => setFefoViewer(null)}
+        medicineName={fefoViewer.name}
+    />
+)}
         </div>
     );
 };

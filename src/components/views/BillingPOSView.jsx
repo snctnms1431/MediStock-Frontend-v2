@@ -23,6 +23,8 @@ import {
 
 import { adminService } from '../../services/adminService';
 import { useToast } from '../../context/ToastContext';
+import { FEFODispenseModal } from '../modals/FEFODispenseModal';
+
 
 export const BillingPOSView = () => {
     const { showToast } = useToast();
@@ -39,6 +41,10 @@ export const BillingPOSView = () => {
     const [loading, setLoading] = useState(true);
     const [checkoutLoading, setCheckoutLoading] = useState(false);
     const [loadError, setLoadError] = useState(false);
+
+    //FEFO
+    const [fefoMedicine, setFefoMedicine] = useState(null);
+    const [isFefoOpen, setIsFefoOpen] = useState(false);
 
     useEffect(() => {
         let mounted = true;
