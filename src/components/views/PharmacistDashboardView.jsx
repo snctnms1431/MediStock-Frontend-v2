@@ -473,7 +473,7 @@ export const PharmacistDashboardView = ({
                             value={medicines.length}
                             subtitle="Medicines in current inventory"
                             icon={Pill}
-                            accent="bg-blue-600"
+                            accent="bg-blue-700"
                             iconBg="bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400"
                             badge="Inventory"
                             onClick={() => navigate('inventory')}

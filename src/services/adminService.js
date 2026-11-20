@@ -131,6 +131,10 @@ updatePurchaseOrderStatus: async (id, status) => {
     deleteCategory: async (id) => {
         await axiosClient.delete(`/admin/categories/${id}`);
     },
+    updateCategory: async (id, data) => {
+        const response = await axiosClient.put(`/admin/categories/${id}`, data);
+        return response.data;
+    },
 
     // --- INVENTORY LOGS ---
     getStockLogs: async () => {

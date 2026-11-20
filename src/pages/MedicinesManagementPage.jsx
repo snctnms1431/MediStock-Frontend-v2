@@ -23,8 +23,13 @@ export default function MedicinesManagementPage({
         key: 'id',
         direction: 'asc'
     });
+       // If canEdit/canDelete aren't explicitly passed, derive from role:
     const { user } = useAuth();
     const role = (user?.role || '').toUpperCase();
+    
+    const canAdd = canEdit !== undefined ? canEdit : ['ADMIN', 'PHARMACIST'].includes(role);
+    const canEditMed = canEdit !== undefined ? canEdit : ['ADMIN', 'PHARMACIST'].includes(role);
+    const canDeleteMed = canDelete !== undefined ? canDelete : role === 'ADMIN';
 
     const fetchMeds = async () => {
         try {
@@ -151,16 +156,16 @@ export default function MedicinesManagementPage({
                         </p>
                     </div>
 
-                    {(isAdmin || role === 'PHARMACIST') && (
-                        <button
-                            type="button"
-                            onClick={onOpenAddModal}
-                            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 active:scale-[0.98] dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
-                        >
-                            <Plus size={17} />
-                            Add Medicine
-                        </button>
-                    )}
+                 {canAdd && (
+    <button
+        type="button"
+        onClick={onOpenAddModal}
+        className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm shadow-blue-600/20 transition hover:bg-blue-700 active:scale-[0.98] dark:bg-cyan-400 dark:text-slate-950 dark:hover:bg-cyan-300"
+    >
+        <Plus size={17} />
+        Add Medicine
+    </button>
+)}
                 </div>
 
                 {/* Summary Cards */}
@@ -288,9 +293,9 @@ export default function MedicinesManagementPage({
                                         <SortButton label="Expiry Date" field="expiryDate" />
                                     </th>
                                     <th className="px-5 py-4 font-semibold">Supplier</th>
-{(isAdmin || role === 'PHARMACIST') && (
+{canEditMed && (
     <th className="px-5 py-4 text-right font-semibold">Actions</th>
-)}                                </tr>
+)}                              </tr>
                             </thead>
 
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -422,7 +427,7 @@ export default function MedicinesManagementPage({
                                                 </td>
 
                                                 {/* Actions */}
-                                                {(isAdmin || role === 'PHARMACIST') && (
+                                                {canEditMed && (
     <td className="px-5 py-4">
         <div className="flex items-center justify-end gap-2">
             <button
@@ -434,14 +439,16 @@ export default function MedicinesManagementPage({
                 <Edit size={15} />
             </button>
 
-            <button
-                type="button"
-                onClick={() => onDeleteMedicine?.(m)}
-                title="Delete medicine"
-                className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-rose-400/10 dark:hover:text-rose-300"
-            >
-                <Trash2 size={15} />
-            </button>
+            {canDeleteMed && (
+                <button
+                    type="button"
+                    onClick={() => onDeleteMedicine?.(m)}
+                    title="Delete medicine"
+                    className="rounded-lg border border-slate-200 bg-white p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-rose-400/10 dark:hover:text-rose-300"
+                >
+                    <Trash2 size={15} />
+                </button>
+            )}
         </div>
     </td>
 )}

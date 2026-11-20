@@ -33,6 +33,7 @@ export default function CategoriesPage() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [formData, setFormData] = useState({ name: '', description: '' });
     const [isSaving, setIsSaving] = useState(false);
+    const [editingCategory, setEditingCategory] = useState(null);
 
     // Existing pharmacist category selection logic
     const [selectedCategory, setSelectedCategory] = useState(null);
@@ -55,22 +56,32 @@ export default function CategoriesPage() {
         fetchData();
     }, []);
 
-    const handleSave = async (e) => {
+        const handleSave = async (e) => {
         e.preventDefault();
         if (isSaving) return;
 
         setIsSaving(true);
-
         try {
-            await adminService.createCategory(formData);
+            if (editingCategory) {
+                await adminService.updateCategory(editingCategory.id, formData);
+            } else {
+                await adminService.createCategory(formData);
+            }
             setIsModalOpen(false);
+            setEditingCategory(null);
             setFormData({ name: '', description: '' });
             await fetchData();
         } catch (err) {
-            alert('Failed to save category');
+            alert(editingCategory ? 'Failed to update category' : 'Failed to save category');
         } finally {
             setIsSaving(false);
         }
+    };
+
+        const handleEditClick = (category) => {
+        setEditingCategory(category);
+        setFormData({ name: category.name, description: category.description || '' });
+        setIsModalOpen(true);
     };
 
     const handleDelete = async (id) => {
@@ -126,9 +137,10 @@ export default function CategoriesPage() {
         };
     };
 
-    const closeModal = () => {
+       const closeModal = () => {
         if (isSaving) return;
         setIsModalOpen(false);
+        setEditingCategory(null);
         setFormData({ name: '', description: '' });
     };
 
@@ -470,6 +482,7 @@ export default function CategoriesPage() {
                                           <div className="flex shrink-0 items-center gap-1">
                                                 <button
                                                     type="button"
+                                                    onClick={() => handleEditClick(c)}
                                                     title="Edit category"
                                                     aria-label={`Edit ${c.name}`}
                                                     className="rounded-lg p-2 text-blue-600 transition hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-500/10"
@@ -627,6 +640,7 @@ export default function CategoriesPage() {
                                                           <>
                                                             <button
                                                                 type="button"
+                                                                onClick={() => handleEditClick(c)}
                                                                 title="Edit category"
                                                                 aria-label={`Edit ${c.name}`}
                                                                 className="rounded-xl border border-slate-200 bg-white p-2.5 text-blue-600 transition hover:border-blue-200 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-900 dark:text-blue-400 dark:hover:border-blue-500/40 dark:hover:bg-blue-500/10"

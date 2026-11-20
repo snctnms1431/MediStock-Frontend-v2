@@ -215,22 +215,21 @@ export const AppLayout = () => {
                    {activeTab === 'billing' && role === 'SUPPLIER' && <SupplierBillingView />}
 
                    {/* MEDICINES (Admin & Pharmacist) */}
-                   {activeTab === 'medicines' && ['ADMIN', 'PHARMACIST','STAFF'].includes(role) && (
-                        <MedicinesManagementPage
-                            isAdmin={role === 'ADMIN'}
-                            onOpenAddModal={() => {
-                                if (role !== 'ADMIN') return;
-                                setEditingMedicine(null);
-                                setMedicineModalOpen(true);
-                            }}
-                            onEditMedicine={(med) => {
-                                if (role !== 'ADMIN') return;
-                                setEditingMedicine(med);
-                                setMedicineModalOpen(true);
-                            }}
-                            onDeleteMedicine={role === 'ADMIN' ? handlePromptDeleteMedicine : undefined}
-                        />
-                    )}
+                  {activeTab === 'medicines' && ['ADMIN', 'PHARMACIST', 'STAFF'].includes(role) && (
+    <MedicinesManagementPage
+        canEdit={['ADMIN', 'PHARMACIST'].includes(role)}
+        canDelete={role === 'ADMIN'}
+        onOpenAddModal={() => {
+            setEditingMedicine(null);
+            setMedicineModalOpen(true);
+        }}
+        onEditMedicine={(med) => {
+            setEditingMedicine(med);
+            setMedicineModalOpen(true);
+        }}
+        onDeleteMedicine={role === 'ADMIN' ? handlePromptDeleteMedicine : undefined}
+    />
+)}
 
                     {/* CATEGORIES */}
                     {activeTab === 'categories' && <CategoriesPage />}
