@@ -73,7 +73,11 @@ axiosClient.interceptors.response.use(
             return Promise.reject(new Error(errorMessage));
         } else if (error.request) {
             // Network failure or backend server not running
-           return Promise.reject(new Error('Unable to connect to MediStock backend server. Please check your connection and try again.'));
+           return Promise.reject(
+            new Error(
+                 'Our server is waking up after a period of inactivity. The first response may take a few minutes. Please wait a little and try logging in again. Don’t worry, this is temporary!'
+                )
+            );
         } else {
             return Promise.reject(error);
         }
